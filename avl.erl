@@ -65,30 +65,6 @@ get(Key, Tree) ->
     {value, Val} = lookup(Key, Tree),
     Val.
 
-%% balance({_Key, _Val, _Dept, TreeL, TreeR} = T) ->
-%%     DR = ?depth(TreeR),
-%%     DL = ?depth(TreeL),
-%%     case DL - DR of
-%% 	2  -> lbalance(T, DR);
-%% 	-2 -> rbalance(T, DL);
-%% 	_  -> T
-%%     end.
-
-%% lbalance({K, V, _D, {KL, VL, _DL, TLL, {KLR, VLR, DLR, TLRL, TLRR}}, TR}, DR) 
-%%   when DLR =:= DR+1 -> %%LR inbalance
-%%     DLL = ?depth(TLL),
-%%     {KLR, VLR, DLL+2, {KL, VL, DLL+1, TLL, TLRL}, {K, V, DLL+1, TLRR, TR}};
-%% lbalance({Key, Val, _Depth, {KL, VL, DL, TLL, TLR}, TR}, _)  ->
-%%     {KL, VL, DL, TLL, {Key, Val, ?depth(TR)+1, TLR, TR}}.
-
-%% rbalance({K, V, _D, TL, {KR, VR, _DR, {KRL, VRL, DRL, TRLL, TRLR}, TRR}}, DL)
-%%   when DRL =:= DL+1 -> %%RL inbalance
-%%     DRR = ?depth(TRR),
-%%     {KRL, VRL, DRR+2, {K, V, DRR+1, TL, TRLL}, {KR, VR, DRR+1, TRLR, TRR}};
-%% rbalance({Key, Val, _Depth, TL, {KR, VR, DR, TRL, TRR}}, _) ->
-%%     {KR, VR, DR, {Key, Val, ?depth(TL)+1, TL, TRL}, TRR}.
-
-balance(?nil) -> ?nil; %% from after take_smallest/largest.
 balance({_Key, _Val, _Dept, TreeL, TreeR} = T) 
   when abs(?depth(TreeL) - ?depth(TreeR)) =/= 2 ->
     T;
