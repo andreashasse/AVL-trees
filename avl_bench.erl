@@ -10,8 +10,8 @@
 -compile([export_all]).
 
 bench() ->
-    RandTimes = do_bench(10000, rand),
-    SortTimes = do_bench(10000, sort),
+    RandTimes = do_bench(100000, rand),
+    SortTimes = do_bench(100000, sort),
     io:format("rand ~p", [RandTimes]),
     io:format("sort ~p", [SortTimes]).
 
