@@ -129,31 +129,22 @@ insert(AKey, AVal, ?nil) ->
 %% TODO update/3
 %% TODO enter/3
 
-delete(DKey, {Key, Val, Depth, TreeL, TreeR}) ->
-    T = do_delete(DKey, {Key, Val, Depth, TreeL, TreeR}),
-    case is_ok(T) of
-	true ->
-	    T;
-	false ->
-	    io:format("~p ~p~n~p", [DKey, {Key, Val, Depth, TreeL, TreeR}, T])
-    end.
-
-do_delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey < Key ->
-    NewTreeL = do_delete(DKey, TreeL),
+delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey < Key ->
+    NewTreeL = delete(DKey, TreeL),
     NewT = {Key, Val, max(?depth(NewTreeL), ?depth(TreeR))+1, NewTreeL, TreeR},
     balance(NewT);
-do_delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey > Key ->
-    NewTreeR = do_delete(DKey, TreeR),
+delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey > Key ->
+    NewTreeR = delete(DKey, TreeR),
     NewT = {Key, Val, max(?depth(TreeL), ?depth(NewTreeR))+1, TreeL, NewTreeR},
     balance(NewT);
-do_delete(Key, {Key, _Val, _Depth, ?nil, TreeR}) -> TreeR;
-do_delete(Key, {Key, _Val, _Depth, TreeL, ?nil}) -> TreeL;
-do_delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) 
+delete(Key, {Key, _Val, _Depth, ?nil, TreeR}) -> TreeR;
+delete(Key, {Key, _Val, _Depth, TreeL, ?nil}) -> TreeL;
+delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) 
   when ?depth(TreeL) > ?depth(TreeR) ->
     {LKey, LVal, NewTreeL} = take_largest(TreeL),
     T = {LKey, LVal, max(?depth(NewTreeL), ?depth(TreeR))+1, NewTreeL, TreeR},
     balance(T); %% Maybe not balance
-do_delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) ->
+delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) ->
     {RKey, RVal, NewTreeR} = take_smallest(TreeR),
     T = {RKey, RVal, max(?depth(TreeL), ?depth(NewTreeR))+1, TreeL, NewTreeR},
     balance(T). %% Maybe not balance
