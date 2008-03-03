@@ -10,17 +10,21 @@
 -define(depth(Node), element(3, Node)).
 -define(nil, {nil, nil, 0}).
 
--export([empty/0, is_empty/1, size/1, lookup/2, get/2, insert/3,
+-export([empty/0, is_empty/1, size/1, 
+	 lookup/2, get/2, is_defined/2,  
+	 insert/3,
 	 delete/2, delete_any/2, balance/1,
-	 keys/1, 
-	 smallest/1, largest/1, take_smallest/1, take_largest/1]).
+	 keys/1, values/1, to_list/1, from_orddict/1,
+	 smallest/1, largest/1, take_smallest/1, take_largest/1
+	 ]).
 
 -export([depth/1, test_all/0]).
 
 -compile([export_all]).
 
-%% update/3, enter/3, from_orddict/1, iterator/1, next/1, is_defined/2
-%% to_list/1, values/1, 
+%% update/3, enter/3, 
+%% 
+%% iterator/1, next/1
 
 
 %% node
@@ -125,6 +129,7 @@ delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) ->
     T = {RKey, RVal, max(?depth(TreeL), ?depth(NewTreeR))+1, TreeL, NewTreeR},
     balance(T). %% Maybe not balance
 
+%%XXX not so pretty
 delete_any(Key, Tree) ->
     case catch delete(Key, Tree) of
 	{'EXIT', _} -> Tree;
@@ -132,16 +137,41 @@ delete_any(Key, Tree) ->
 	    NewTree
     end.
 
-%%TODO is_defined
+is_defined(Key, T) ->
+    case lookup(Key, T) of
+	{value, _} -> true;
+	none -> false
+    end.
 
-%%TODO keys
+%%XXX stolen from gb_trees.
+keys(T) ->
+    keys(T, []).
 
-%%TODO values
+keys({Key, _Val, _Depth, TreeL, TreeR}, L) ->
+    keys(TreeL, [Key | keys(TreeR, L)]);
+keys(?nil, L) -> L.
 
-%%TODO to_list
+%%XXX not sorted by values
+values(T) ->
+    values(T, []).
 
-%%TODO from_orddict
+values({_Key, Val, _Depth, TreeL, TreeR}, L) ->
+    values(TreeL, [Val | values(TreeR, L)]);
+values(?nil, L) -> L.
 
+to_list(T) ->
+    to_list(T, []).
+
+to_list({Key, Val, _Depth, TreeL, TreeR}, L) ->
+    to_list(TreeL, [{Key, Val} | to_list(TreeR, L)]);
+to_list(?nil, L) -> L.
+
+
+%%XXX is in fact a from_list
+from_orddict(List) ->
+    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
+    lists:foldl(Insert, avl:empty(), List).
+    
 
 %%tailcall?
 take_largest({Key, Val, _Depth, TreeL, ?nil}) -> {Key, Val, TreeL};
@@ -188,14 +218,6 @@ test_take_smallest(N) ->
 %%TODO iterator
 
 %%TODO next
-
-%% testing (assumes no lists as keys)
-keys(T) -> lists:flatten(do_keys(T)).
-
-do_keys(?nil) -> [];
-do_keys({Key, _, _, TreeL, TreeR}) ->
-    [do_keys(TreeL), Key, do_keys(TreeR)].
-
 
 is_ok(?nil) -> true;
 is_ok({_, _, 1, ?nil, ?nil}) -> true;
@@ -248,6 +270,11 @@ test_del() ->
     T = lists:foldl(AddF, empty(), Stuff),
     [1, 6, 7, 10, 13] = keys(delete(5, T)),
     [1, 5, 6, 7, 13] = keys(delete(10, T)),
+    ["1", "5", "6", "7", "D"] = values(delete(10, T)),
+    KeySort = lists:keysort(1, Stuff),
+    KeySort = to_list(T),
+    T = from_orddict(KeySort),
+    ?nil = from_orddict([]), %% silly
     DelStuff = [1, 6, 10],
     T2 = lists:foldl(DelF, T, DelStuff),
     true = (?depth(T2) == ?depth(T)-1),
