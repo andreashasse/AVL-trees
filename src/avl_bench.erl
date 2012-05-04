@@ -35,31 +35,30 @@ do_avl(List) ->
     {_, _} = clock__time(),
     Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
     Tree = lists:foldl(Insert, avl:empty(), List),
-    {Rtime1, Wall1} = clock__time(),
+    {Rtime1, _Wall1} = clock__time(),
     %% lookup
     Lookup = fun({Key, Val}) -> {value, Val} == avl:lookup(Key, Tree) end,
     true = lists:all(Lookup, List),
-    {Rtime2, Wall2} = clock__time(),
+    {Rtime2, _Wall2} = clock__time(),
     %% delete
     Delete = fun({Key, _Val}, TreeAcc) -> avl:delete(Key, TreeAcc) end,
     lists:foldl(Delete, Tree, List),
-    {Rtime3, Wall3} = clock__time(),
+    {Rtime3, _Wall3} = clock__time(),
     {Rtime1, Rtime2, Rtime3}.
-    
 
 do_gb(List) ->
     %% insert
     {_, _} = clock__time(),
     Insert = fun({Key, Val}, TreeAcc) -> gb_trees:insert(Key, Val, TreeAcc) end,
     Tree = lists:foldl(Insert, gb_trees:empty(), List),
-    {Rtime1, Wall1} = clock__time(),
+    {Rtime1, _Wall1} = clock__time(),
     %% lookup
     Lookup = fun({Key, Val}) -> {value, Val} == gb_trees:lookup(Key, Tree) end,
     true = lists:all(Lookup, List),
-    {Rtime2, Wall2} = clock__time(),
+    {Rtime2, _Wall2} = clock__time(),
     %% delete
     Delete = fun({Key, _Val}, TreeAcc) -> gb_trees:delete(Key, TreeAcc) end,
     lists:foldl(Delete, Tree, List),
-    {Rtime3, Wall3} = clock__time(),
+    {Rtime3, _Wall3} = clock__time(),
     {Rtime1, Rtime2, Rtime3}.
 
