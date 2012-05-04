@@ -192,24 +192,6 @@ largest({_Key, _Val, _Depth, _TreeL, TreeR}) -> largest(TreeR).
 smallest({Key, Val, _Depth, ?nil, _TreeR}) -> {Key, Val};
 smallest({_Key, _Val, _Depth, TreeL, _TreeR}) -> smallest(TreeL).
 
-test_take_largest(N) ->
-    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
-    List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, avl:empty(), List),
-    {N, _, T} = take_largest(Tree),
-    Keys = keys(T),
-    Keys = lists:seq(1, N-1).
-
-test_take_smallest(N) ->
-    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
-    List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, avl:empty(), List),
-    {1, _, T} = take_smallest(Tree),
-    {2, _, T2} = take_smallest(T),
-    Keys = keys(T2),
-    Keys = lists:seq(3, N).
 
 
 %%TODO iterator
@@ -244,6 +226,7 @@ is_ok({Key, _, Depth, TreeL, TreeR}) ->
 basic_test() ->
     A1 = avl:empty(),
     ?assertEqual(none, avl:lookup(key, A1)),
+    ?assertEqual(false, is_defined(key, A1)),
     ?assert(is_empty(A1)),
     A2 = avl:insert(7, g, A1),
     A3 = avl:insert(8, h, A2),
@@ -252,6 +235,8 @@ basic_test() ->
     ?assertEqual(3, avl:size(A4)),
     ?assertNot(is_empty(A2)),
     ?assertEqual({value, h}, lookup(8, A4)),
+    ?assertEqual(h, get(8, A4)),
+    ?assertEqual(true, is_defined(8, A4)),
     ?assertEqual({value, g}, lookup(7, A4)),
     ?assertEqual({value, f}, lookup(6, A4)),
     ?assert(is_ok(A2)),
@@ -283,5 +268,26 @@ del_test() ->
     ?assertEqual(T, delete_any(mojs, T)),
     ?assert(is_ok(T)),
     ?assert(is_ok(T2)).
+
+take_largest_test() ->
+    N = 100,
+    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
+    List = lists:keysort(2, List0),
+    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
+    Tree = lists:foldl(Insert, avl:empty(), List),
+    ?assertMatch({N, _, _}, take_largest(Tree)),
+    ?assertEqual(keys(element(3, take_largest(Tree))), lists:seq(1, N-1)).
+
+take_smallest_test() ->
+    N = 100,
+    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
+    List = lists:keysort(2, List0),
+    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
+    Tree = lists:foldl(Insert, avl:empty(), List),
+    ?assertMatch({1, _, _}, take_smallest(Tree)),
+    ?assertMatch({2, _, _}, take_smallest(element(3, take_smallest(Tree)))),
+    ?assertEqual(keys(element(3, take_smallest(element(3, take_smallest(Tree))))),
+                 lists:seq(3, N)).
+
 
 -endif. %% TEST
