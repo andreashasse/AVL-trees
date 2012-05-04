@@ -10,6 +10,8 @@
 
 -export([do/3, test/0]).
 
+-export([do_map/2]). %% not used.
+
 do(MapF, ReduceF, Data) ->
     do(MapF, ReduceF, Data, infinity).
 
