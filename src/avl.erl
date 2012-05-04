@@ -236,6 +236,7 @@ basic_test() ->
     ?assertEqual(3, avl:size(A4)),
     ?assertNot(is_empty(A2)),
     ?assertEqual({value, h}, lookup(8, A4)),
+    ?assertEqual(none, lookup(key, A4)),
     ?assertEqual(h, get(8, A4)),
     ?assertEqual({6, f}, smallest(A4)),
     ?assertEqual({8, h}, largest(A4)),
@@ -270,11 +271,12 @@ del_test() ->
     T2 = lists:foldl(DelF, T, DelStuff),
     ?assertEqual(depth(T2), depth(T)-1),
     ?assertEqual(T, delete_any(mojs, T)),
+    ?assertNot(T =:= delete_any(5, T)),
     ?assert(is_ok(T)),
     ?assert(is_ok(T2)).
 
 take_largest_test() ->
-    N = 100,
+    N = 15,
     List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
     List = lists:keysort(2, List0),
     Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
@@ -283,7 +285,7 @@ take_largest_test() ->
     ?assertEqual(keys(element(3, take_largest(Tree))), lists:seq(1, N-1)).
 
 take_smallest_test() ->
-    N = 100,
+    N = 15,
     List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
     List = lists:keysort(2, List0),
     Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
