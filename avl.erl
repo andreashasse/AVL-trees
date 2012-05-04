@@ -10,8 +10,8 @@
 -define(depth(Node), element(3, Node)).
 -define(nil, {nil, nil, 0}).
 
--export([empty/0, is_empty/1, size/1, 
-	 lookup/2, get/2, is_defined/2,  
+-export([empty/0, is_empty/1, size/1,
+	 lookup/2, get/2, is_defined/2,
 	 insert/3,
 	 delete/2, delete_any/2, balance/1,
 	 keys/1, values/1, to_list/1, from_orddict/1,
@@ -22,8 +22,8 @@
 
 -compile([export_all]).
 
-%% update/3, enter/3, 
-%% 
+%% update/3, enter/3,
+%%
 %% iterator/1, next/1
 
 
@@ -48,10 +48,10 @@ is_empty(_) -> false.
 size(T) ->
     size1(T).
 
-size1(?nil) -> 0;    
+size1(?nil) -> 0;
 size1({_Key, _Val, _Depth, TreeR, TreeL}) ->
     1 + size1(TreeR) + size1(TreeL).
-    
+
 depth(T) -> ?depth(T).
 
 %%done
@@ -69,7 +69,7 @@ get(Key, Tree) ->
     {value, Val} = lookup(Key, Tree),
     Val.
 
-balance({_Key, _Val, _Dept, TreeL, TreeR} = T) 
+balance({_Key, _Val, _Dept, TreeL, TreeR} = T)
   when abs(?depth(TreeL) - ?depth(TreeR)) =/= 2 ->
     T;
 balance({Key, Val, _Depth, {KL, VL, _DL, TLL, TLR}, TR}) %% ok for TL == ?nil
@@ -77,12 +77,12 @@ balance({Key, Val, _Depth, {KL, VL, _DL, TLL, TLR}, TR}) %% ok for TL == ?nil
     NewDTR = max(?depth(TR), ?depth(TLR))+1, %% optimize?
     NewDL = max(NewDTR, ?depth(TLL))+1,
     {KL, VL, NewDL, TLL, {Key, Val, NewDTR, TLR, TR}};
-balance({Key, Val, _Depth, TL, {KR, VR, _DR, TRL, TRR}}) 
+balance({Key, Val, _Depth, TL, {KR, VR, _DR, TRL, TRR}})
   when ?depth(TRR) =:= ?depth(TL)+1 -> %% RR inbalance
     NewDTL = max(?depth(TL), ?depth(TRL))+1, %% optimize?
     NewDR = max(NewDTL, ?depth(TRR))+1,
     {KR, VR, NewDR, {Key, Val, NewDTL, TL, TRL}, TRR};
-balance({K, V, _D, {KL, VL, _DL, TLL, {KLR, VLR, DLR, TLRL, TLRR}}, TR}) 
+balance({K, V, _D, {KL, VL, _DL, TLL, {KLR, VLR, DLR, TLRL, TLRR}}, TR})
   when DLR =:= ?depth(TR)+1 -> %%LR inbalance / =:= D+1??
     DLL = ?depth(TLL),
     {KLR, VLR, DLL+2, {KL, VL, DLL+1, TLL, TLRL}, {K, V, DLL+1, TLRR, TR}};
@@ -93,16 +93,16 @@ balance({K, V, _D, TL, {KR, VR, _DR, {KRL, VRL, DRL, TRLL, TRLR}, TRR}})
 
 max(A, B) when A < B -> B;
 max(A, _) -> A.
-    
+
 %%done, not optimized
 insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey < Key ->
     NewTreeL = insert(AKey, AVal, TreeL),
     NewT = {Key, Val, max(?depth(NewTreeL)+1, Depth), NewTreeL, TreeR},
-    balance(NewT); 
+    balance(NewT);
 insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey > Key ->
     NewTreeR = insert(AKey, AVal, TreeR),
     NewT = {Key, Val, max(?depth(NewTreeR)+1, Depth), TreeL, NewTreeR},
-    balance(NewT); 
+    balance(NewT);
 insert(AKey, AVal, ?nil) ->
     {AKey, AVal, 1, ?nil, ?nil}.
 
@@ -119,7 +119,7 @@ delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey > Key ->
     balance(NewT);
 delete(Key, {Key, _Val, _Depth, ?nil, TreeR}) -> TreeR;
 delete(Key, {Key, _Val, _Depth, TreeL, ?nil}) -> TreeL;
-delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) 
+delete(Key, {Key, _Val, _Depth, TreeL, TreeR})
   when ?depth(TreeL) > ?depth(TreeR) ->
     {LKey, LVal, NewTreeL} = take_largest(TreeL),
     T = {LKey, LVal, max(?depth(NewTreeL), ?depth(TreeR))+1, NewTreeL, TreeR},
@@ -171,18 +171,17 @@ to_list(?nil, L) -> L.
 from_orddict(List) ->
     Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
     lists:foldl(Insert, avl:empty(), List).
-    
 
 %%tailcall?
 take_largest({Key, Val, _Depth, TreeL, ?nil}) -> {Key, Val, TreeL};
-take_largest({Key, Val, _Depth, TreeL, TreeR}) -> 
+take_largest({Key, Val, _Depth, TreeL, TreeR}) ->
     {LKey, LVal, NewTreeR} = take_largest(TreeR),
     NewT0 = {Key, Val, max(?depth(TreeL), ?depth(NewTreeR))+1, TreeL, NewTreeR},
     NewT = balance(NewT0),
     {LKey, LVal, NewT}.
 
 take_smallest({Key, Val, _Depth, ?nil, TreeR}) -> {Key, Val, TreeR};
-take_smallest({Key, Val, _Depth, TreeL, TreeR}) -> 
+take_smallest({Key, Val, _Depth, TreeL, TreeR}) ->
     {LKey, LVal, NewTreeL} = take_smallest(TreeL),
     NewT0 = {Key, Val, max(?depth(NewTreeL), ?depth(TreeR))+1, NewTreeL, TreeR},
     NewT = balance(NewT0),
@@ -240,7 +239,7 @@ is_ok({Key, _, Depth, TreeL, TreeR}) ->
 	 ((Depth == DepthL+1) or
 	  (Depth == DepthR+1))),
     T and is_ok(TreeL) and is_ok(TreeR).
-	    
+
 test() ->
     A1 = avl:empty(),
     true = is_empty(A1),
@@ -254,7 +253,7 @@ test() ->
     {value, g} = lookup(7, A4),
     {value, f} = lookup(6, A4),
     is_ok(A2) and is_ok(A3) and is_ok(A4).
-    
+
 test_lr() ->
     Add = fun({Key, Val}, AvlAcc) -> avl:insert(Key, Val, AvlAcc) end,
     Stuff = [{10, "A"}, {5, "5"}, {13, "D"}, {1, "1"}, {7, "7"}, {6, "6"}],
@@ -280,9 +279,8 @@ test_del() ->
     true = (?depth(T2) == ?depth(T)-1),
     T = delete_any(mojs, T),
     is_ok(T) and is_ok(T2).
-    
+
 test_all() ->
     test() and test_lr() and test_del().
-	    
 
 
