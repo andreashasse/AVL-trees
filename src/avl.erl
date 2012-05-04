@@ -91,9 +91,6 @@ balance({K, V, _D, TL, {KR, VR, _DR, {KRL, VRL, DRL, TRLL, TRLR}, TRR}})
     DRR = ?depth(TRR),
     {KRL, VRL, DRR+2, {K, V, DRR+1, TL, TRLL}, {KR, VR, DRR+1, TRLR, TRR}}.
 
-max(A, B) when A < B -> B;
-max(A, _) -> A.
-
 %%done, not optimized
 insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey < Key ->
     NewTreeL = insert(AKey, AVal, TreeL),
