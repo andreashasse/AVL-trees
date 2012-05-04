@@ -225,6 +225,7 @@ is_ok({Key, _, Depth, TreeL, TreeR}) ->
 
 basic_test() ->
     A1 = avl:empty(),
+    ?assertEqual([], to_list(A1)),
     ?assertEqual(none, avl:lookup(key, A1)),
     ?assertEqual(false, is_defined(key, A1)),
     ?assert(is_empty(A1)),
@@ -241,6 +242,7 @@ basic_test() ->
     ?assertEqual(true, is_defined(8, A4)),
     ?assertEqual({value, g}, lookup(7, A4)),
     ?assertEqual({value, f}, lookup(6, A4)),
+    ?assert(is_ok(A1)),
     ?assert(is_ok(A2)),
     ?assert(is_ok(A3)),
     ?assert(is_ok(A4)).
