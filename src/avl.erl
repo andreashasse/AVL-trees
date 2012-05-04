@@ -18,7 +18,7 @@
 	 smallest/1, largest/1, take_smallest/1, take_largest/1
 	 ]).
 
--export([depth/1, test_all/0]).
+-export([depth/1]).
 
 -compile([export_all]).
 
@@ -55,6 +55,7 @@ size1({_Key, _Val, _Depth, TreeR, TreeL}) ->
 depth(T) -> ?depth(T).
 
 %%done
+lookup(_FKey, ?nil) -> none;
 lookup(FKey, {Key, Val, _, _, _} = T) ->
     lookup(FKey, T, Key, Val).
 
@@ -215,6 +216,9 @@ test_take_smallest(N) ->
 
 %%TODO next
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
 is_ok(?nil) -> true;
 is_ok({_, _, 1, ?nil, ?nil}) -> true;
 is_ok({Key, _, 2, ?nil,
@@ -237,29 +241,31 @@ is_ok({Key, _, Depth, TreeL, TreeR}) ->
 	  (Depth == DepthR+1))),
     T and is_ok(TreeL) and is_ok(TreeR).
 
-test() ->
+basic_test() ->
     A1 = avl:empty(),
-    true = is_empty(A1),
+    ?assertEqual(none, avl:lookup(key, A1)),
+    ?assert(is_empty(A1)),
     A2 = avl:insert(7, g, A1),
     A3 = avl:insert(8, h, A2),
     A4 = avl:insert(6, f, A3),
-    1 = avl:size(A2),
-    3 = avl:size(A4),
-    false = is_empty(A2),
-    {value, h} = lookup(8, A4),
-    {value, g} = lookup(7, A4),
-    {value, f} = lookup(6, A4),
-    is_ok(A2) and is_ok(A3) and is_ok(A4).
+    ?assertEqual(1, avl:size(A2)),
+    ?assertEqual(3, avl:size(A4)),
+    ?assertNot(is_empty(A2)),
+    ?assertEqual({value, h}, lookup(8, A4)),
+    ?assertEqual({value, g}, lookup(7, A4)),
+    ?assertEqual({value, f}, lookup(6, A4)),
+    ?assert(is_ok(A2)),
+    ?assert(is_ok(A3)),
+    ?assert(is_ok(A4)).
 
-test_lr() ->
+lr_test() ->
     Add = fun({Key, Val}, AvlAcc) -> avl:insert(Key, Val, AvlAcc) end,
     Stuff = [{10, "A"}, {5, "5"}, {13, "D"}, {1, "1"}, {7, "7"}, {6, "6"}],
     A2 = lists:foldl(Add, avl:empty(), Stuff),
-    io:format("A2 ~p~n~n", [A2]),
-    is_ok(A2).
+    ?assert(is_ok(A2)).
 
 
-test_del() ->
+del_test() ->
     AddF = fun({Key, Val}, AvlAcc) -> insert(Key, Val, AvlAcc) end,
     DelF = fun(Key, AvlAcc) -> delete(Key, AvlAcc) end,
     Stuff = [{10, "A"}, {5, "5"}, {13, "D"}, {1, "1"}, {7, "7"}, {6, "6"}],
@@ -268,16 +274,14 @@ test_del() ->
     [1, 5, 6, 7, 13] = keys(delete(10, T)),
     ["1", "5", "6", "7", "D"] = values(delete(10, T)),
     KeySort = lists:keysort(1, Stuff),
-    KeySort = to_list(T),
-    T = from_orddict(KeySort),
-    ?nil = from_orddict([]), %% silly
+    ?assertEqual(KeySort, to_list(T)),
+    ?assertEqual(T, from_orddict(KeySort)),
+    ?assertEqual(?nil, from_orddict([])), %% silly
     DelStuff = [1, 6, 10],
     T2 = lists:foldl(DelF, T, DelStuff),
-    true = (?depth(T2) == ?depth(T)-1),
-    T = delete_any(mojs, T),
-    is_ok(T) and is_ok(T2).
+    ?assertEqual(depth(T2), depth(T)-1),
+    ?assertEqual(T, delete_any(mojs, T)),
+    ?assert(is_ok(T)),
+    ?assert(is_ok(T2)).
 
-test_all() ->
-    test() and test_lr() and test_del().
-
-
+-endif. %% TEST
