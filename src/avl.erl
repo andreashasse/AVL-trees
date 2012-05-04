@@ -167,8 +167,8 @@ to_list(?nil, L) -> L.
 
 %%XXX is in fact a from_list
 from_orddict(List) ->
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    lists:foldl(Insert, avl:empty(), List).
+    Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
+    lists:foldl(Insert, empty(), List).
 
 %%tailcall?
 take_largest({Key, Val, _Depth, TreeL, ?nil}) -> {Key, Val, TreeL};
@@ -224,14 +224,14 @@ is_ok({Key, _, Depth, TreeL, TreeR}) ->
     T and is_ok(TreeL) and is_ok(TreeR).
 
 basic_test() ->
-    A1 = avl:empty(),
+    A1 = empty(),
     ?assertEqual([], to_list(A1)),
-    ?assertEqual(none, avl:lookup(key, A1)),
+    ?assertEqual(none, lookup(key, A1)),
     ?assertEqual(false, is_defined(key, A1)),
     ?assert(is_empty(A1)),
-    A2 = avl:insert(7, g, A1),
-    A3 = avl:insert(8, h, A2),
-    A4 = avl:insert(6, f, A3),
+    A2 = insert(7, g, A1),
+    A3 = insert(8, h, A2),
+    A4 = insert(6, f, A3),
     ?assertEqual(1, avl:size(A2)),
     ?assertEqual(3, avl:size(A4)),
     ?assertNot(is_empty(A2)),
@@ -248,9 +248,9 @@ basic_test() ->
     ?assert(is_ok(A4)).
 
 lr_test() ->
-    Add = fun({Key, Val}, AvlAcc) -> avl:insert(Key, Val, AvlAcc) end,
+    Add = fun({Key, Val}, AvlAcc) -> insert(Key, Val, AvlAcc) end,
     Stuff = [{10, "A"}, {5, "5"}, {13, "D"}, {1, "1"}, {7, "7"}, {6, "6"}],
-    A2 = lists:foldl(Add, avl:empty(), Stuff),
+    A2 = lists:foldl(Add, empty(), Stuff),
     ?assert(is_ok(A2)).
 
 
@@ -277,8 +277,8 @@ take_largest_test() ->
     N = 100,
     List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
     List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, avl:empty(), List),
+    Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
+    Tree = lists:foldl(Insert, empty(), List),
     ?assertMatch({N, _, _}, take_largest(Tree)),
     ?assertEqual(keys(element(3, take_largest(Tree))), lists:seq(1, N-1)).
 
@@ -286,8 +286,8 @@ take_smallest_test() ->
     N = 100,
     List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
     List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, avl:empty(), List),
+    Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
+    Tree = lists:foldl(Insert, empty(), List),
     ?assertMatch({1, _, _}, take_smallest(Tree)),
     ?assertMatch({2, _, _}, take_smallest(element(3, take_smallest(Tree)))),
     ?assertEqual(keys(element(3, take_smallest(element(3, take_smallest(Tree))))),
