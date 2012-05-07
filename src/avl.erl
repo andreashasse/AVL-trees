@@ -21,7 +21,9 @@
 
 -export([depth/1]).
 
+-ifdef(TEST).
 -include_lib("proper/include/proper.hrl").
+-endif.
 
 %% iterator/1, next/1
 
