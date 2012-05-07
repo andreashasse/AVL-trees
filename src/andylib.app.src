@@ -1,0 +1,11 @@
+{application, andylib,
+ [
+  {description, "Lots of very good modules"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.

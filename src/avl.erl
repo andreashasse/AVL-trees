@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : avl.erl
 %%% Author  : Andreas Hasselberg <andreas.hasselberg@gmail.com>
-%%% Description : testing avl trees
+%%% Description : An implementation of avl trees.
 %%%
 %%% Created : 26 Dec 2007 by Andreas Hasselberg <>
 %%%-------------------------------------------------------------------
@@ -11,19 +11,18 @@
 -define(nil, {nil, nil, 0}).
 
 -export([empty/0, is_empty/1, size/1,
-	 lookup/2, get/2, is_defined/2,
-	 insert/3,
-	 delete/2, delete_any/2, balance/1,
-	 keys/1, values/1, to_list/1, from_orddict/1,
-	 smallest/1, largest/1, take_smallest/1, take_largest/1
-	 ]).
+         lookup/2, get/2, is_defined/2,
+         insert/3, update/3, enter/3,
+         delete/2, delete_any/2, balance/1,
+         keys/1, values/1, to_list/1, from_orddict/1,
+         smallest/1, largest/1, take_smallest/1, take_largest/1,
+         enters/2, inserts/2
+        ]).
 
--export([depth/1, test_all/0]).
+-export([depth/1]).
 
--compile([export_all]).
+-include_lib("proper/include/proper.hrl").
 
-%% update/3, enter/3,
-%%
 %% iterator/1, next/1
 
 
@@ -54,7 +53,7 @@ size1({_Key, _Val, _Depth, TreeR, TreeL}) ->
 
 depth(T) -> ?depth(T).
 
-%%done
+lookup(_FKey, ?nil) -> none;
 lookup(FKey, {Key, Val, _, _, _} = T) ->
     lookup(FKey, T, Key, Val).
 
@@ -91,9 +90,6 @@ balance({K, V, _D, TL, {KR, VR, _DR, {KRL, VRL, DRL, TRLL, TRLR}, TRR}})
     DRR = ?depth(TRR),
     {KRL, VRL, DRR+2, {K, V, DRR+1, TL, TRLL}, {KR, VR, DRR+1, TRLR, TRR}}.
 
-max(A, B) when A < B -> B;
-max(A, _) -> A.
-
 %%done, not optimized
 insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey < Key ->
     NewTreeL = insert(AKey, AVal, TreeL),
@@ -106,8 +102,20 @@ insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey > Key ->
 insert(AKey, AVal, ?nil) ->
     {AKey, AVal, 1, ?nil, ?nil}.
 
-%% TODO update/3
-%% TODO enter/3
+update(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey < Key ->
+    NewTreeL = update(AKey, AVal, TreeL),
+    {Key, Val, Depth, NewTreeL, TreeR};
+update(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey > Key ->
+    NewTreeR = update(AKey, AVal, TreeR),
+    {Key, Val, Depth, TreeL, NewTreeR};
+update(Key, AVal, {Key, _Val, Depth, TreeL, TreeR}) ->
+    {Key, AVal, Depth, TreeL, TreeR}.
+
+enter(Key, Val, T) ->
+    case is_defined(Key, T) of
+        true  -> update(Key, Val, T);
+        false -> insert(Key, Val, T)
+    end.
 
 delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey < Key ->
     NewTreeL = delete(DKey, TreeL),
@@ -132,15 +140,15 @@ delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) ->
 %%XXX not so pretty
 delete_any(Key, Tree) ->
     case catch delete(Key, Tree) of
-	{'EXIT', _} -> Tree;
-	NewTree when is_tuple(NewTree) ->
-	    NewTree
+        {'EXIT', _} -> Tree;
+        NewTree when is_tuple(NewTree) ->
+            NewTree
     end.
 
 is_defined(Key, T) ->
     case lookup(Key, T) of
-	{value, _} -> true;
-	none -> false
+        {value, _} -> true;
+        none -> false
     end.
 
 %%XXX stolen from gb_trees.
@@ -166,11 +174,10 @@ to_list({Key, Val, _Depth, TreeL, TreeR}, L) ->
     to_list(TreeL, [{Key, Val} | to_list(TreeR, L)]);
 to_list(?nil, L) -> L.
 
-
 %%XXX is in fact a from_list
 from_orddict(List) ->
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    lists:foldl(Insert, avl:empty(), List).
+    Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
+    lists:foldl(Insert, empty(), List).
 
 %%tailcall?
 take_largest({Key, Val, _Depth, TreeL, ?nil}) -> {Key, Val, TreeL};
@@ -187,36 +194,27 @@ take_smallest({Key, Val, _Depth, TreeL, TreeR}) ->
     NewT = balance(NewT0),
     {LKey, LVal, NewT}.
 
-
 largest({Key, Val, _Depth, _TreeL, ?nil}) -> {Key, Val};
 largest({_Key, _Val, _Depth, _TreeL, TreeR}) -> largest(TreeR).
 
 smallest({Key, Val, _Depth, ?nil, _TreeR}) -> {Key, Val};
 smallest({_Key, _Val, _Depth, TreeL, _TreeR}) -> smallest(TreeL).
 
-test_take_largest(N) ->
-    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
-    List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, avl:empty(), List),
-    {N, _, T} = take_largest(Tree),
-    Keys = keys(T),
-    Keys = lists:seq(1, N-1).
+enters(Tree, List) -> ops(Tree, List, fun enter/3).
 
-test_take_smallest(N) ->
-    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
-    List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> avl:insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, avl:empty(), List),
-    {1, _, T} = take_smallest(Tree),
-    {2, _, T2} = take_smallest(T),
-    Keys = keys(T2),
-    Keys = lists:seq(3, N).
+inserts(Tree, List) -> ops(Tree, List, fun insert/3).
+
+ops(Tree, List, F) ->
+    OpF = fun({Key, Val}, TreeAcc) -> F(Key, Val, TreeAcc) end,
+    lists:foldl(OpF, Tree, List).
 
 
 %%TODO iterator
 
 %%TODO next
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 is_ok(?nil) -> true;
 is_ok({_, _, 1, ?nil, ?nil}) -> true;
@@ -233,54 +231,112 @@ is_ok({Key, _, Depth, TreeL, TreeR}) ->
     DepthL = ?depth(TreeL),
     DepthR = ?depth(TreeR),
     T = ((Key > KeyL) and
-	 (Key < KeyR) and
-	 (Depth > DepthL) and
-	 (Depth > DepthR) and
-	 ((Depth == DepthL+1) or
-	  (Depth == DepthR+1))),
+         (Key < KeyR) and
+         (Depth > DepthL) and
+         (Depth > DepthR) and
+         ((Depth == DepthL+1) or
+          (Depth == DepthR+1))),
     T and is_ok(TreeL) and is_ok(TreeR).
 
-test() ->
-    A1 = avl:empty(),
-    true = is_empty(A1),
-    A2 = avl:insert(7, g, A1),
-    A3 = avl:insert(8, h, A2),
-    A4 = avl:insert(6, f, A3),
-    1 = avl:size(A2),
-    3 = avl:size(A4),
-    false = is_empty(A2),
-    {value, h} = lookup(8, A4),
-    {value, g} = lookup(7, A4),
-    {value, f} = lookup(6, A4),
-    is_ok(A2) and is_ok(A3) and is_ok(A4).
+basic_test() ->
+    A1 = empty(),
+    ?assertEqual([], to_list(A1)),
+    ?assertEqual(none, lookup(key, A1)),
+    ?assertEqual(false, is_defined(key, A1)),
+    ?assert(is_empty(A1)),
+    A2 = insert(7, g, A1),
+    ?assertEqual(A2, enter(7, g, A1)),
+    A3 = insert(8, h, A2),
+    A4 = insert(6, f, A3),
+    ?assertEqual(1, avl:size(A2)),
+    ?assertEqual(3, avl:size(A4)),
+    ?assertNot(is_empty(A2)),
+    ?assertEqual({value, h}, lookup(8, A4)),
+    ?assertEqual(none, lookup(key, A4)),
+    ?assertEqual(h, get(8, A4)),
+    ?assertEqual({6, f}, smallest(A4)),
+    ?assertEqual({8, h}, largest(A4)),
+    ?assertEqual(true, is_defined(8, A4)),
+    ?assertEqual({value, g}, lookup(7, A4)),
+    ?assertEqual({value, f}, lookup(6, A4)),
+    ?assert(is_ok(A1)),
+    ?assert(is_ok(A2)),
+    ?assert(is_ok(A3)),
+    ?assert(is_ok(A4)).
 
-test_lr() ->
-    Add = fun({Key, Val}, AvlAcc) -> avl:insert(Key, Val, AvlAcc) end,
+lr_test() ->
+    Add = fun({Key, Val}, AvlAcc) -> insert(Key, Val, AvlAcc) end,
     Stuff = [{10, "A"}, {5, "5"}, {13, "D"}, {1, "1"}, {7, "7"}, {6, "6"}],
-    A2 = lists:foldl(Add, avl:empty(), Stuff),
-    io:format("A2 ~p~n~n", [A2]),
-    is_ok(A2).
+    A2 = lists:foldl(Add, empty(), Stuff),
+    ?assert(is_ok(A2)).
 
-
-test_del() ->
+del_test() ->
     AddF = fun({Key, Val}, AvlAcc) -> insert(Key, Val, AvlAcc) end,
     DelF = fun(Key, AvlAcc) -> delete(Key, AvlAcc) end,
     Stuff = [{10, "A"}, {5, "5"}, {13, "D"}, {1, "1"}, {7, "7"}, {6, "6"}],
     T = lists:foldl(AddF, empty(), Stuff),
-    [1, 6, 7, 10, 13] = keys(delete(5, T)),
-    [1, 5, 6, 7, 13] = keys(delete(10, T)),
-    ["1", "5", "6", "7", "D"] = values(delete(10, T)),
+    ?assertEqual([1, 6, 7, 10, 13], keys(delete(5, T))),
+    ?assertEqual([1, 5, 6, 7, 13], keys(delete(10, T))),
+    ?assertEqual(["1", "5", "6", "7", "D"], values(delete(10, T))),
     KeySort = lists:keysort(1, Stuff),
-    KeySort = to_list(T),
-    T = from_orddict(KeySort),
-    ?nil = from_orddict([]), %% silly
+    ?assertEqual(KeySort, to_list(T)),
+    ?assertEqual(T, from_orddict(KeySort)),
+    ?assertEqual(?nil, from_orddict([])), %% silly
     DelStuff = [1, 6, 10],
     T2 = lists:foldl(DelF, T, DelStuff),
-    true = (?depth(T2) == ?depth(T)-1),
-    T = delete_any(mojs, T),
-    is_ok(T) and is_ok(T2).
+    ?assertEqual(depth(T2), depth(T)-1),
+    ?assertEqual(T, delete_any(mojs, T)),
+    ?assertNot(T =:= delete_any(5, T)),
+    ?assert(is_ok(T)),
+    ?assert(is_ok(T2)).
 
-test_all() ->
-    test() and test_lr() and test_del().
+take_largest_test() ->
+    N = 15,
+    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
+    List = lists:keysort(2, List0),
+    Tree = inserts(empty(), List),
+    ?assertMatch({N, _, _}, take_largest(Tree)),
+    ?assertEqual(keys(element(3, take_largest(Tree))), lists:seq(1, N-1)).
+
+take_smallest_test() ->
+    N = 15,
+    List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
+    List = lists:keysort(2, List0),
+    Tree = inserts(empty(), List),
+    ?assertMatch({1, _, _}, take_smallest(Tree)),
+    ?assertMatch({2, _, _}, take_smallest(element(3, take_smallest(Tree)))),
+    ?assertEqual(keys(element(3, take_smallest(element(3, take_smallest(Tree))))),
+                 lists:seq(3, N)).
+
+proper_hack_test() ->
+    ?assert(proper:quickcheck(prop_insert_get())),
+    ?assert(proper:quickcheck(prop_gb())).
+
+%% ---------------------------------------------------------------------------
+%% PROPERTY TESTS
+
+%% FIXME: do something more interesting of this.
+prop_insert_get() ->
+    ?FORALL(X, integer(),
+            begin
+                Y = get(X, insert(X,X, empty())),
+                X =:= Y
+            end).
+
+prop_gb() ->
+    ?FORALL(List,
+            list({integer(), integer()}),
+            begin
+                Tree = enters(empty(), List),
+                ?assert(is_ok(Tree)),
+                GbInsert = fun({Key, Val}, TreeAcc) -> gb_trees:enter(Key, Val, TreeAcc) end,
+                GbTree = lists:foldl(GbInsert, gb_trees:empty(), List),
+%%                 io:format("Ops ~p res ~p ~p~n",
+%%                           [List,
+%%                            lists:sort(gb_trees:to_list(GbTree)),
+%%                            lists:sort(to_list(Tree))]),
+                lists:sort(gb_trees:to_list(GbTree)) =:= lists:sort(to_list(Tree))
+            end).
 
 
+-endif. %% TEST
