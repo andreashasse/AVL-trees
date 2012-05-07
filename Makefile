@@ -11,11 +11,9 @@ clean:
 	find . -name "#*#" -exec rm {} \;
 
 ct:
-	rm -rf apps/*/logs/
 	rebar ct skip_deps=true
 
 ct_case:
-	rm -rf apps/*/logs/
 	rebar ct skip_deps=true suites=${SUITE} case=${CASE}
 
 test:
@@ -27,4 +25,4 @@ init_dialyzer:
 	dialyzer --apps stdlib kernel -r deps --build_plt --output_plt .dialyzer.plt
 
 dialyzer:
-	dialyzer -r apps --plt .dialyzer.plt
+	dialyzer -r ebin --plt .dialyzer.plt
