@@ -12,15 +12,18 @@
 
 -export([empty/0, is_empty/1, size/1,
 	 lookup/2, get/2, is_defined/2,
-	 insert/3,
+	 insert/3, update/3, enter/3,
 	 delete/2, delete_any/2, balance/1,
 	 keys/1, values/1, to_list/1, from_orddict/1,
-	 smallest/1, largest/1, take_smallest/1, take_largest/1
+	 smallest/1, largest/1, take_smallest/1, take_largest/1,
+         enters/2
 	 ]).
 
 -export([depth/1]).
 
--compile([export_all]).
+-export([do_props/0]).
+
+-include_lib("proper/include/proper.hrl").
 
 %% update/3, enter/3,
 %%
@@ -104,8 +107,20 @@ insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey > Key ->
 insert(AKey, AVal, ?nil) ->
     {AKey, AVal, 1, ?nil, ?nil}.
 
-%% TODO update/3
-%% TODO enter/3
+update(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey < Key ->
+    NewTreeL = update(AKey, AVal, TreeL),
+    {Key, Val, Depth, NewTreeL, TreeR};
+update(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey > Key ->
+    NewTreeR = update(AKey, AVal, TreeR),
+    {Key, Val, Depth, TreeL, NewTreeR};
+update(Key, AVal, {Key, _Val, Depth, TreeL, TreeR}) ->
+    {Key, AVal, Depth, TreeL, TreeR}.
+
+enter(Key, Val, T) ->
+    case is_defined(Key, T) of
+        true  -> update(Key, Val, T);
+        false -> insert(Key, Val, T)
+    end.
 
 delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey < Key ->
     NewTreeL = delete(DKey, TreeL),
@@ -279,8 +294,7 @@ take_largest_test() ->
     N = 15,
     List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
     List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, empty(), List),
+    Tree = inserts(empty(), List),
     ?assertMatch({N, _, _}, take_largest(Tree)),
     ?assertEqual(keys(element(3, take_largest(Tree))), lists:seq(1, N-1)).
 
@@ -288,12 +302,48 @@ take_smallest_test() ->
     N = 15,
     List0 = [ {X, random:uniform(N)} || X <- lists:seq(1, N) ],
     List = lists:keysort(2, List0),
-    Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
-    Tree = lists:foldl(Insert, empty(), List),
+    Tree = inserts(empty(), List),
     ?assertMatch({1, _, _}, take_smallest(Tree)),
     ?assertMatch({2, _, _}, take_smallest(element(3, take_smallest(Tree)))),
     ?assertEqual(keys(element(3, take_smallest(element(3, take_smallest(Tree))))),
                  lists:seq(3, N)).
 
+inserts(Tree, List) -> ops(Tree, List, fun insert/3).
 
 -endif. %% TEST
+
+
+%% ---------------------------------------------------------------------------
+%% PROPERTY TESTS
+
+prop_insert_get() ->
+    ?FORALL(X, integer(),
+	    begin
+		Y = get(X, insert(X,X, empty())),
+		X =:= Y
+	    end).
+
+enters(Tree, List) -> ops(Tree, List, fun enter/3).
+
+ops(Tree, List, F) ->
+    OpF = fun({Key, Val}, TreeAcc) -> F(Key, Val, TreeAcc) end,
+    lists:foldl(OpF, Tree, List).
+
+prop_gb() ->
+    ?FORALL(List,
+            list({integer(), integer()}),
+            begin
+                Tree = enters(empty(), List),
+                GbInsert = fun({Key, Val}, TreeAcc) -> gb_trees:enter(Key, Val, TreeAcc) end,
+                GbTree = lists:foldl(GbInsert, gb_trees:empty(), List),
+%%                 io:format("Ops ~p res ~p ~p~n",
+%%                           [List,
+%%                            lists:sort(gb_trees:to_list(GbTree)),
+%%                            lists:sort(to_list(Tree))]),
+                lists:sort(gb_trees:to_list(GbTree)) =:= lists:sort(to_list(Tree))
+            end).
+
+
+do_props() ->
+    proper:quickcheck(prop_insert_get()),
+    proper:quickcheck(prop_gb()).
