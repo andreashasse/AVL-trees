@@ -11,13 +11,13 @@
 -define(nil, {nil, nil, 0}).
 
 -export([empty/0, is_empty/1, size/1,
-	 lookup/2, get/2, is_defined/2,
-	 insert/3, update/3, enter/3,
-	 delete/2, delete_any/2, balance/1,
-	 keys/1, values/1, to_list/1, from_orddict/1,
-	 smallest/1, largest/1, take_smallest/1, take_largest/1,
+         lookup/2, get/2, is_defined/2,
+         insert/3, update/3, enter/3,
+         delete/2, delete_any/2, balance/1,
+         keys/1, values/1, to_list/1, from_orddict/1,
+         smallest/1, largest/1, take_smallest/1, take_largest/1,
          enters/2, inserts/2
-	 ]).
+        ]).
 
 -export([depth/1]).
 
@@ -53,7 +53,6 @@ size1({_Key, _Val, _Depth, TreeR, TreeL}) ->
 
 depth(T) -> ?depth(T).
 
-%%done
 lookup(_FKey, ?nil) -> none;
 lookup(FKey, {Key, Val, _, _, _} = T) ->
     lookup(FKey, T, Key, Val).
@@ -141,15 +140,15 @@ delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) ->
 %%XXX not so pretty
 delete_any(Key, Tree) ->
     case catch delete(Key, Tree) of
-	{'EXIT', _} -> Tree;
-	NewTree when is_tuple(NewTree) ->
-	    NewTree
+        {'EXIT', _} -> Tree;
+        NewTree when is_tuple(NewTree) ->
+            NewTree
     end.
 
 is_defined(Key, T) ->
     case lookup(Key, T) of
-	{value, _} -> true;
-	none -> false
+        {value, _} -> true;
+        none -> false
     end.
 
 %%XXX stolen from gb_trees.
@@ -175,7 +174,6 @@ to_list({Key, Val, _Depth, TreeL, TreeR}, L) ->
     to_list(TreeL, [{Key, Val} | to_list(TreeR, L)]);
 to_list(?nil, L) -> L.
 
-
 %%XXX is in fact a from_list
 from_orddict(List) ->
     Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
@@ -195,7 +193,6 @@ take_smallest({Key, Val, _Depth, TreeL, TreeR}) ->
     NewT0 = {Key, Val, max(?depth(NewTreeL), ?depth(TreeR))+1, NewTreeL, TreeR},
     NewT = balance(NewT0),
     {LKey, LVal, NewT}.
-
 
 largest({Key, Val, _Depth, _TreeL, ?nil}) -> {Key, Val};
 largest({_Key, _Val, _Depth, _TreeL, TreeR}) -> largest(TreeR).
@@ -234,11 +231,11 @@ is_ok({Key, _, Depth, TreeL, TreeR}) ->
     DepthL = ?depth(TreeL),
     DepthR = ?depth(TreeR),
     T = ((Key > KeyL) and
-	 (Key < KeyR) and
-	 (Depth > DepthL) and
-	 (Depth > DepthR) and
-	 ((Depth == DepthL+1) or
-	  (Depth == DepthR+1))),
+         (Key < KeyR) and
+         (Depth > DepthL) and
+         (Depth > DepthR) and
+         ((Depth == DepthL+1) or
+          (Depth == DepthR+1))),
     T and is_ok(TreeL) and is_ok(TreeR).
 
 basic_test() ->
@@ -272,7 +269,6 @@ lr_test() ->
     Stuff = [{10, "A"}, {5, "5"}, {13, "D"}, {1, "1"}, {7, "7"}, {6, "6"}],
     A2 = lists:foldl(Add, empty(), Stuff),
     ?assert(is_ok(A2)).
-
 
 del_test() ->
     AddF = fun({Key, Val}, AvlAcc) -> insert(Key, Val, AvlAcc) end,
@@ -319,12 +315,13 @@ proper_hack_test() ->
 %% ---------------------------------------------------------------------------
 %% PROPERTY TESTS
 
+%% FIXME: do something more interesting of this.
 prop_insert_get() ->
     ?FORALL(X, integer(),
-	    begin
-		Y = get(X, insert(X,X, empty())),
-		X =:= Y
-	    end).
+            begin
+                Y = get(X, insert(X,X, empty())),
+                X =:= Y
+            end).
 
 prop_gb() ->
     ?FORALL(List,
