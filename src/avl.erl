@@ -16,12 +16,10 @@
 	 delete/2, delete_any/2, balance/1,
 	 keys/1, values/1, to_list/1, from_orddict/1,
 	 smallest/1, largest/1, take_smallest/1, take_largest/1,
-         enters/2
+         enters/2, inserts/2
 	 ]).
 
 -export([depth/1]).
-
--export([do_props/0]).
 
 -include_lib("proper/include/proper.hrl").
 
@@ -205,6 +203,13 @@ largest({_Key, _Val, _Depth, _TreeL, TreeR}) -> largest(TreeR).
 smallest({Key, Val, _Depth, ?nil, _TreeR}) -> {Key, Val};
 smallest({_Key, _Val, _Depth, TreeL, _TreeR}) -> smallest(TreeL).
 
+enters(Tree, List) -> ops(Tree, List, fun enter/3).
+
+inserts(Tree, List) -> ops(Tree, List, fun insert/3).
+
+ops(Tree, List, F) ->
+    OpF = fun({Key, Val}, TreeAcc) -> F(Key, Val, TreeAcc) end,
+    lists:foldl(OpF, Tree, List).
 
 
 %%TODO iterator
@@ -307,10 +312,9 @@ take_smallest_test() ->
     ?assertEqual(keys(element(3, take_smallest(element(3, take_smallest(Tree))))),
                  lists:seq(3, N)).
 
-inserts(Tree, List) -> ops(Tree, List, fun insert/3).
-
--endif. %% TEST
-
+proper_hack_test() ->
+    ?assert(proper:quickcheck(prop_insert_get())),
+    ?assert(proper:quickcheck(prop_gb())).
 
 %% ---------------------------------------------------------------------------
 %% PROPERTY TESTS
@@ -322,17 +326,12 @@ prop_insert_get() ->
 		X =:= Y
 	    end).
 
-enters(Tree, List) -> ops(Tree, List, fun enter/3).
-
-ops(Tree, List, F) ->
-    OpF = fun({Key, Val}, TreeAcc) -> F(Key, Val, TreeAcc) end,
-    lists:foldl(OpF, Tree, List).
-
 prop_gb() ->
     ?FORALL(List,
             list({integer(), integer()}),
             begin
                 Tree = enters(empty(), List),
+                ?assert(is_ok(Tree)),
                 GbInsert = fun({Key, Val}, TreeAcc) -> gb_trees:enter(Key, Val, TreeAcc) end,
                 GbTree = lists:foldl(GbInsert, gb_trees:empty(), List),
 %%                 io:format("Ops ~p res ~p ~p~n",
@@ -343,6 +342,4 @@ prop_gb() ->
             end).
 
 
-do_props() ->
-    proper:quickcheck(prop_insert_get()),
-    proper:quickcheck(prop_gb()).
+-endif. %% TEST
