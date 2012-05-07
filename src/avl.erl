@@ -319,7 +319,7 @@ proper_hack_test() ->
 
 %% FIXME: do something more interesting of this.
 prop_insert_get() ->
-    ?FORALL(X, integer(),
+    ?FORALL(X, any(),
             begin
                 Y = get(X, insert(X,X, empty())),
                 X =:= Y
@@ -327,7 +327,7 @@ prop_insert_get() ->
 
 prop_gb() ->
     ?FORALL(List,
-            list({integer(), integer()}),
+            list({any(), any()}),
             begin
                 Tree = enters(empty(), List),
                 ?assert(is_ok(Tree)),
