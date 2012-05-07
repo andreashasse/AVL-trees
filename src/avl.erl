@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : avl.erl
 %%% Author  : Andreas Hasselberg <andreas.hasselberg@gmail.com>
-%%% Description : testing avl trees
+%%% Description : An implementation of avl trees.
 %%%
 %%% Created : 26 Dec 2007 by Andreas Hasselberg <>
 %%%-------------------------------------------------------------------
@@ -25,8 +25,6 @@
 
 -include_lib("proper/include/proper.hrl").
 
-%% update/3, enter/3,
-%%
 %% iterator/1, next/1
 
 
@@ -245,6 +243,7 @@ basic_test() ->
     ?assertEqual(false, is_defined(key, A1)),
     ?assert(is_empty(A1)),
     A2 = insert(7, g, A1),
+    ?assertEqual(A2, enter(7, g, A1)),
     A3 = insert(8, h, A2),
     A4 = insert(6, f, A3),
     ?assertEqual(1, avl:size(A2)),
