@@ -222,11 +222,11 @@ is_ok(?nil) -> true;
 is_ok({_, _, 1, ?nil, ?nil}) -> true;
 is_ok({Key, _, 2, ?nil,
        {KeyR, _, 1, ?nil, ?nil}}) ->
-    true == (Key < KeyR);
+    Key < KeyR;
 is_ok({Key, _, 2,
        {KeyL, _, 1, ?nil, ?nil},
        ?nil}) ->
-    true == (Key > KeyL);
+    Key > KeyL;
 is_ok({Key, _, Depth, TreeL, TreeR}) ->
     KeyL = element(1, TreeL),
     KeyR = element(1, TreeR),
