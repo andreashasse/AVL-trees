@@ -16,15 +16,15 @@
          delete/2, delete_any/2, balance/1,
          keys/1, values/1, to_list/1, from_orddict/1,
          smallest/1, largest/1, take_smallest/1, take_largest/1,
-         enters/2, inserts/2
+         enters/2, inserts/2,
+         iterator/1, next/1
         ]).
 
 -export([depth/1]).
 
+-ifdef(TEST).
 -include_lib("proper/include/proper.hrl").
-
-%% iterator/1, next/1
-
+-endif.
 
 %% node
 %%
@@ -208,10 +208,20 @@ ops(Tree, List, F) ->
     OpF = fun({Key, Val}, TreeAcc) -> F(Key, Val, TreeAcc) end,
     lists:foldl(OpF, Tree, List).
 
+iterator(Tree) ->
+    iterator(Tree, []).
 
-%%TODO iterator
+%% Acc is the nodes with respective right branches yet to traverse.
+iterator({_Key, _Val, _Depth, ?nil, _TreeR} = T, Acc) -> %% no smaller element
+    [T|Acc];
+iterator({_Key, _Val, _Depth, TreeL, _TreeR} = T, Acc) -> %% walking down left
+    iterator(TreeL, [T|Acc]);
+iterator(?nil, Acc) -> Acc.
 
-%%TODO next
+next([{Key, Val, _Depth, _TreeL, TreeR} | As]) -> %% TreeL is allready consumed
+    {Key, Val, iterator(TreeR, As)};
+next([]) ->
+    none.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -220,11 +230,11 @@ is_ok(?nil) -> true;
 is_ok({_, _, 1, ?nil, ?nil}) -> true;
 is_ok({Key, _, 2, ?nil,
        {KeyR, _, 1, ?nil, ?nil}}) ->
-    true == (Key < KeyR);
+    Key < KeyR;
 is_ok({Key, _, 2,
        {KeyL, _, 1, ?nil, ?nil},
        ?nil}) ->
-    true == (Key > KeyL);
+    Key > KeyL;
 is_ok({Key, _, Depth, TreeL, TreeR}) ->
     KeyL = element(1, TreeL),
     KeyR = element(1, TreeR),
@@ -279,6 +289,7 @@ del_test() ->
     ?assertEqual([1, 5, 6, 7, 13], keys(delete(10, T))),
     ?assertEqual(["1", "5", "6", "7", "D"], values(delete(10, T))),
     KeySort = lists:keysort(1, Stuff),
+    ?assertEqual(KeySort, iter_all(T)),
     ?assertEqual(KeySort, to_list(T)),
     ?assertEqual(T, from_orddict(KeySort)),
     ?assertEqual(?nil, from_orddict([])), %% silly
@@ -289,6 +300,15 @@ del_test() ->
     ?assertNot(T =:= delete_any(5, T)),
     ?assert(is_ok(T)),
     ?assert(is_ok(T2)).
+
+iter_all(Tree) ->
+    iter_all(Tree, iterator(Tree)).
+
+iter_all(Tree, Iter) ->
+    case next(Iter) of
+        none -> [];
+        {Key, Val, NewIter} -> [{Key, Val}|iter_all(Tree, NewIter)]
+    end.
 
 take_largest_test() ->
     N = 15,
@@ -317,7 +337,7 @@ proper_hack_test() ->
 
 %% FIXME: do something more interesting of this.
 prop_insert_get() ->
-    ?FORALL(X, integer(),
+    ?FORALL(X, any(),
             begin
                 Y = get(X, insert(X,X, empty())),
                 X =:= Y
@@ -325,7 +345,7 @@ prop_insert_get() ->
 
 prop_gb() ->
     ?FORALL(List,
-            list({integer(), integer()}),
+            list({any(), any()}),
             begin
                 Tree = enters(empty(), List),
                 ?assert(is_ok(Tree)),
