@@ -6,6 +6,8 @@ The worse performance on random input is due to the fact the avl trees has stric
 In a lot of cases where the avl get unbalanced and need balancing the gb_trees is ok and there is a sigificant chance that gb_trees will be more balanced after the next operation.
 The increased performace on ordered input is that the both trees need to balance a lot. The balancing of an avl tree takes less effort.
 
+[![Build Status](https://secure.travis-ci.org/anha0825/AVL-trees.png)](http://travis-ci.org/anha0825/AVL-trees)
+
 ## Todo
 ### Complete
  - Borrow type specs from gb_trees.
