@@ -37,13 +37,19 @@
 %% }
 %%
 
+-type avl_node() :: {any(), any(), non_neg_integer(), avl_node(), avl_node()} | ?nil.
+-opaque iter() :: [{any(), any(), avl_node()}].
+
+-spec empty() -> avl_node().
 empty() -> ?nil.
 
+-spec is_empty(avl_node()) -> boolean().
 is_empty(?nil) -> true;
 is_empty(_) -> false.
 
 
 %% the excecution time of size/1 is linear to the size of the tree
+-spec size(avl_node()) -> non_neg_integer().
 size(T) ->
     size1(T).
 
@@ -51,8 +57,10 @@ size1(?nil) -> 0;
 size1({_Key, _Val, _Depth, TreeR, TreeL}) ->
     1 + size1(TreeR) + size1(TreeL).
 
+-spec depth(avl_node()) -> non_neg_integer().
 depth(T) -> ?depth(T).
 
+-spec lookup(Key::any(), avl_node()) -> 'none' | {'value', any()}.
 lookup(_FKey, ?nil) -> none;
 lookup(FKey, {Key, Val, _, _, _} = T) ->
     lookup(FKey, T, Key, Val).
@@ -64,9 +72,12 @@ lookup(FKey, {Key, Val, _D, _TL, TreeR}, _CKey, _CVal) ->
 lookup(FKey, ?nil, FKey, Val) -> {value, Val};
 lookup(_, ?nil, _, _) -> none.
 
+-spec get(Key::any(), avl_node()) -> Value::any().
 get(Key, Tree) ->
-    {value, Val} = lookup(Key, Tree),
-    Val.
+    case lookup(Key, Tree) of
+        {value, Val} -> Val;
+        none -> erlang:error(badarg, [Key,Tree])
+    end.
 
 balance({_Key, _Val, _Dept, TreeL, TreeR} = T)
   when abs(?depth(TreeL) - ?depth(TreeR)) =/= 2 ->
@@ -91,6 +102,7 @@ balance({K, V, _D, TL, {KR, VR, _DR, {KRL, VRL, DRL, TRLL, TRLR}, TRR}})
     {KRL, VRL, DRR+2, {K, V, DRR+1, TL, TRLL}, {KR, VR, DRR+1, TRLR, TRR}}.
 
 %%done, not optimized
+-spec insert(Key::any(), Val::any(), avl_node()) -> avl_node().
 insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey < Key ->
     NewTreeL = insert(AKey, AVal, TreeL),
     NewT = {Key, Val, max(?depth(NewTreeL)+1, Depth), NewTreeL, TreeR},
@@ -100,8 +112,12 @@ insert(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey > Key ->
     NewT = {Key, Val, max(?depth(NewTreeR)+1, Depth), TreeL, NewTreeR},
     balance(NewT);
 insert(AKey, AVal, ?nil) ->
-    {AKey, AVal, 1, ?nil, ?nil}.
+    {AKey, AVal, 1, ?nil, ?nil};
+insert(Key, Val, {Key, _, _, _, _} = Tree) ->
+    erlang:error(badarg, [Key,Val,Tree]).
 
+
+-spec update(Key::any(), Val::any(), avl_node()) -> avl_node().
 update(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey < Key ->
     NewTreeL = update(AKey, AVal, TreeL),
     {Key, Val, Depth, NewTreeL, TreeR};
@@ -109,14 +125,18 @@ update(AKey, AVal, {Key, Val, Depth, TreeL, TreeR}) when AKey > Key ->
     NewTreeR = update(AKey, AVal, TreeR),
     {Key, Val, Depth, TreeL, NewTreeR};
 update(Key, AVal, {Key, _Val, Depth, TreeL, TreeR}) ->
-    {Key, AVal, Depth, TreeL, TreeR}.
+    {Key, AVal, Depth, TreeL, TreeR};
+update(Key, Val, Tree) ->
+    erlang:error(badarg, [Key,Val,Tree]).
 
+-spec enter(Key::any(), Val::any(), avl_node()) -> avl_node().
 enter(Key, Val, T) ->
     case is_defined(Key, T) of
         true  -> update(Key, Val, T);
         false -> insert(Key, Val, T)
     end.
 
+-spec delete(Key::any(), avl_node()) -> avl_node().
 delete(DKey, {Key, Val, _Depth, TreeL, TreeR}) when DKey < Key ->
     NewTreeL = delete(DKey, TreeL),
     NewT = {Key, Val, max(?depth(NewTreeL), ?depth(TreeR))+1, NewTreeL, TreeR},
@@ -135,9 +155,12 @@ delete(Key, {Key, _Val, _Depth, TreeL, TreeR})
 delete(Key, {Key, _Val, _Depth, TreeL, TreeR}) ->
     {RKey, RVal, NewTreeR} = take_smallest(TreeR),
     T = {RKey, RVal, max(?depth(TreeL), ?depth(NewTreeR))+1, TreeL, NewTreeR},
-    balance(T). %% Maybe not balance
+    balance(T); %% Maybe not balance
+delete(Key, ?nil) ->
+    erlang:error(badarg, [Key, ?nil]).
 
 %%XXX not so pretty
+-spec delete_any(Key::any(), avl_node()) -> avl_node().
 delete_any(Key, Tree) ->
     case catch delete(Key, Tree) of
         {'EXIT', _} -> Tree;
@@ -145,6 +168,7 @@ delete_any(Key, Tree) ->
             NewTree
     end.
 
+-spec is_defined(Key::any(), avl_node()) -> boolean().
 is_defined(Key, T) ->
     case lookup(Key, T) of
         {value, _} -> true;
@@ -152,6 +176,7 @@ is_defined(Key, T) ->
     end.
 
 %%XXX stolen from gb_trees.
+-spec keys(avl_node()) -> Keys::[any()].
 keys(T) ->
     keys(T, []).
 
@@ -160,6 +185,7 @@ keys({Key, _Val, _Depth, TreeL, TreeR}, L) ->
 keys(?nil, L) -> L.
 
 %%XXX not sorted by values
+-spec values(avl_node()) -> Values::[any()].
 values(T) ->
     values(T, []).
 
@@ -167,6 +193,7 @@ values({_Key, Val, _Depth, TreeL, TreeR}, L) ->
     values(TreeL, [Val | values(TreeR, L)]);
 values(?nil, L) -> L.
 
+-spec to_list(avl_node()) -> [{Key::any(), Value::any()}].
 to_list(T) ->
     to_list(T, []).
 
@@ -175,39 +202,54 @@ to_list({Key, Val, _Depth, TreeL, TreeR}, L) ->
 to_list(?nil, L) -> L.
 
 %%XXX is in fact a from_list
+-spec from_orddict([{Key::any(), Value::any()}]) -> avl_node().
 from_orddict(List) ->
     Insert = fun({Key, Val}, TreeAcc) -> insert(Key, Val, TreeAcc) end,
     lists:foldl(Insert, empty(), List).
 
+-spec take_largest(avl_node()) -> {Key::any(), Value::any(), avl_node()}.
 %%tailcall?
 take_largest({Key, Val, _Depth, TreeL, ?nil}) -> {Key, Val, TreeL};
 take_largest({Key, Val, _Depth, TreeL, TreeR}) ->
     {LKey, LVal, NewTreeR} = take_largest(TreeR),
     NewT0 = {Key, Val, max(?depth(TreeL), ?depth(NewTreeR))+1, TreeL, NewTreeR},
     NewT = balance(NewT0),
-    {LKey, LVal, NewT}.
+    {LKey, LVal, NewT};
+take_largest(?nil) ->
+    erlang:error(badarg, [?nil]).
 
+
+-spec take_smallest(avl_node()) -> {Key::any(), Value::any(), avl_node()}.
 take_smallest({Key, Val, _Depth, ?nil, TreeR}) -> {Key, Val, TreeR};
 take_smallest({Key, Val, _Depth, TreeL, TreeR}) ->
     {LKey, LVal, NewTreeL} = take_smallest(TreeL),
     NewT0 = {Key, Val, max(?depth(NewTreeL), ?depth(TreeR))+1, NewTreeL, TreeR},
     NewT = balance(NewT0),
-    {LKey, LVal, NewT}.
+    {LKey, LVal, NewT};
+take_smallest(?nil) ->
+    erlang:error(badarg, [?nil]).
 
+-spec largest(avl_node()) -> {Key::any(), Value::any()}.
 largest({Key, Val, _Depth, _TreeL, ?nil}) -> {Key, Val};
-largest({_Key, _Val, _Depth, _TreeL, TreeR}) -> largest(TreeR).
+largest({_Key, _Val, _Depth, _TreeL, TreeR}) -> largest(TreeR);
+largest(?nil) -> erlang:error(badarg, [?nil]).
 
+-spec smallest(avl_node()) -> {Key::any(), Value::any()}.
 smallest({Key, Val, _Depth, ?nil, _TreeR}) -> {Key, Val};
-smallest({_Key, _Val, _Depth, TreeL, _TreeR}) -> smallest(TreeL).
+smallest({_Key, _Val, _Depth, TreeL, _TreeR}) -> smallest(TreeL);
+smallest(?nil) -> erlang:error(badarg, [?nil]).
 
+-spec enters(avl_node(), [{Key::any(), Value::any()}])-> avl_node().
 enters(Tree, List) -> ops(Tree, List, fun enter/3).
 
+-spec inserts(avl_node(), [{Key::any(), Value::any()}])-> avl_node().
 inserts(Tree, List) -> ops(Tree, List, fun insert/3).
 
 ops(Tree, List, F) ->
     OpF = fun({Key, Val}, TreeAcc) -> F(Key, Val, TreeAcc) end,
     lists:foldl(OpF, Tree, List).
 
+-spec iterator(avl_node())-> iter().
 iterator(Tree) ->
     iterator(Tree, []).
 
@@ -218,6 +260,7 @@ iterator({_Key, _Val, _Depth, TreeL, _TreeR} = T, Acc) -> %% walking down left
     iterator(TreeL, [T|Acc]);
 iterator(?nil, Acc) -> Acc.
 
+-spec next(Iter1::iter()) -> 'none' | {Key::any(), Val::any(), Iter2::iter()}.
 next([{Key, Val, _Depth, _TreeL, TreeR} | As]) -> %% TreeL is allready consumed
     {Key, Val, iterator(TreeR, As)};
 next([]) ->
@@ -328,9 +371,13 @@ take_smallest_test() ->
     ?assertEqual(keys(element(3, take_smallest(element(3, take_smallest(Tree))))),
                  lists:seq(3, N)).
 
-proper_hack_test() ->
+%% proper_spec_test() ->
+%%     ?assert(proper:check_specs(?MODULE)).
+
+proper_prop_test() ->
     ?assert(proper:quickcheck(prop_insert_get())),
-    ?assert(proper:quickcheck(prop_gb())).
+    ?assert(proper:quickcheck(prop_gb())),
+    ?assert(proper:quickcheck(prop_enter_delete())).
 
 %% ---------------------------------------------------------------------------
 %% PROPERTY TESTS
@@ -358,5 +405,10 @@ prop_gb() ->
                 lists:sort(gb_trees:to_list(GbTree)) =:= lists:sort(to_list(Tree))
             end).
 
+
+prop_enter_delete() ->
+    ?FORALL({Elem, List},
+            {any(), list({any(), any()})},
+            none =:= lookup(Elem, delete_any(Elem, enters(empty(), List)))).
 
 -endif. %% TEST
