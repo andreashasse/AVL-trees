@@ -9,4 +9,5 @@ deps/*
 logs/*
 erl_crash.dump
 .dialyzer.plt
+doc
 
