@@ -79,6 +79,7 @@ get(Key, Tree) ->
         none -> erlang:error(badarg, [Key,Tree])
     end.
 
+-spec balance(avl_node()) -> avl_node().
 balance({_Key, _Val, _Dept, TreeL, TreeR} = T)
   when abs(?depth(TreeL) - ?depth(TreeR)) =/= 2 ->
     T;
