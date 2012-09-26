@@ -10,15 +10,11 @@ clean:
 	find . -name "erl_crash.dump" -exec rm {} \;
 	find . -name "#*#" -exec rm {} \;
 
-ct:
-	rebar ct skip_deps=true
-
-ct_case:
-	rebar ct skip_deps=true suites=${SUITE} case=${CASE}
-
+edoc:
+	./rebar doc skip_deps=true
 test:
 	rm -rf .eunit
-	./rebar eunit skip_deps=true
+	./rebar compile eunit skip_deps=true
 
 ## add your dependecies here. --apps [depencencies from otp] -r [our deps]
 init_dialyzer:
